@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Обработка данных с подсказкой</title>
+    <style>
+      :root {
+        --primary-color: #3f51b5;
+        --accent-color: #ff4081;
+      }
+
+      body {
+        font-family: "Roboto", sans-serif;
+        background-color: #f5f5f5;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+        font-weight: 400;
+      }
+
+      h2 {
+        color: #555;
+        margin-top: 20px;
+        font-weight: 400;
+      }
+
+      #data {
+        margin-top: 30px;
+        text-align: center;
+      }
+
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        border-bottom: 1px dotted #555;
+        cursor: pointer;
+      }
+
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: var(--primary-color);
+        color: white;
+        text-align: center;
+        border-radius: 4px;
+        padding: 5px 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.6);
+      }
+
+      .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 4px;
+        width: 30%;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .close {
+        color: var(--accent-color);
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="title"></h1>
+    <h2>Имя файла:</h2>
+    <h2>Автор:</h2>
+    <h2>Тэги:</h2>
+    <div id="data"></div>
+
+    <div id="myModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <p id="modalContent"></p>
+      </div>
+    </div>
+
+    <script>
+      function fetchData() {
+        const url = window.location.href;
+
+        const parts = url.split("/");
+
+        const fileName = parts[parts.length - 2];
+
+        const corpusIndex = url.indexOf("/corpus/");
+
+        if (corpusIndex === -1) return;
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4 && xhr.status === 200) {
+            jsonData = JSON.parse(xhr.responseText);
+
+            processData();
+          }
+        };
+
+        xhr.open("GET", `/corpus/${fileName}`, true);
+
+        xhr.send();
+      }
+
+      function processData() {
+        var data = JSON.parse(jsonData);
+
+        document.getElementById("title").innerText = data.title;
+        document.getElementsByTagName("h2")[0].innerText += " " + data.filename;
+        document.getElementsByTagName("h2")[1].innerText += " " + data.author;
+        document.getElementsByTagName("h2")[2].innerText += " " + data.tags;
+
+        function createTooltip(word, wordWithPunctuation, tooltipData) {
+          var tooltip = document.createElement("span");
+          tooltip.classList.add("tooltip");
+          tooltip.innerHTML = wordWithPunctuation;
+          var tooltipText = document.createElement("span");
+          tooltipText.classList.add("tooltiptext");
+          tooltipText.innerHTML = tooltipData;
+          tooltip.appendChild(tooltipText);
+          return tooltip;
+        }
+
+        var dataContainer = document.getElementById("data");
+        dataContainer.addEventListener("click", handleTooltipClick);
+        let textContent = "";
+
+        const lines = data.raw_text.split("\n");
+
+        for (let i = 0; i < lines.length; i++) {
+          const words = lines[i].split(" ");
+
+          for (let j = 0; j < words.length; j++) {
+            let wordWithPunctuation = words[j];
+            let word = wordWithPunctuation.replace(/[,.'""«»\-!?:;—]+/g, "");
+            let wordForCheck = word;
+
+            let tooltipData = "";
+
+            for (let k = 0; k < data.words_markup.length; k++) {
+              const wordData = data.words_markup[k];
+
+              if (wordData.word === wordForCheck) {
+                const lemma = wordData.lemma;
+                const pos = wordData.pos;
+                tooltipData = `<strong>Слово:</strong> ${word}<br><strong>Лемма:</strong> ${lemma}<br><strong>Часть речи:</strong> ${pos}<br>`;
+                break;
+              }
+            }
+
+            if (!tooltipData) {
+              tooltipData = `<strong>Слово:</strong> ${word}<br><strong>Лемма:</strong> -<br><strong>Часть речи:</strong> -<br>`;
+            }
+
+            const tooltip = createTooltip(
+              word,
+              wordWithPunctuation,
+              tooltipData
+            );
+            textContent += tooltip.outerHTML;
+
+            if (j < words.length - 1) {
+              textContent += " ";
+            }
+          }
+
+          if (i < lines.length - 1) {
+            textContent += "<br>";
+          }
+        }
+
+        dataContainer.innerHTML = textContent;
+      }
+
+      function handleTooltipClick(event) {
+        const target = event.target;
+
+        if (target.classList.contains("tooltip")) {
+          const word = target.textContent.replace(/[,.'""«»\-!?:;—]+/g, "");
+          const tooltipData = target.querySelector(".tooltiptext").innerHTML;
+
+          fetchSynonymsAntonymsWithLoading(word, tooltipData);
+        }
+      }
+
+      function fetchSynonymsAntonymsWithLoading(word, tooltipData) {
+        const loadingElement = document.createElement("div");
+        loadingElement.textContent = "Loading...";
+        loadingElement.style.position = "fixed";
+        loadingElement.style.top = "50%";
+        loadingElement.style.left = "50%";
+        loadingElement.style.transform = "translate(-50%, -50%)";
+        loadingElement.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        loadingElement.style.color = "white";
+        loadingElement.style.padding = "10px";
+        loadingElement.style.zIndex = "9999";
+        document.body.appendChild(loadingElement);
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4 && xhr.status === 200) {
+            document.body.removeChild(loadingElement);
+
+            const response = JSON.parse(xhr.responseText);
+            const synonyms = response[0].join(", ");
+            const antonyms = response[1].join(", ");
+
+            const modalContent = `
+        ${tooltipData}
+        ${synonyms ? `<br><strong>Синонимы:</strong> ${synonyms}` : ""}
+        ${antonyms ? `<br><strong>Антонимы:</strong> ${antonyms}` : ""}
+      `;
+
+            showModal(modalContent);
+          }
+        };
+
+        xhr.open(
+          "GET",
+          `/gpt/get_synonyms_antonyms/${encodeURIComponent(word)}`,
+          true
+        );
+        xhr.send();
+      }
+
+      function showModal(content) {
+        const modal = document.getElementById("myModal");
+        const modalContent = document.getElementById("modalContent");
+        const span = document.getElementsByClassName("close")[0];
+
+        modalContent.innerHTML = content;
+        modal.style.display = "block";
+
+        span.onclick = function () {
+          modal.style.display = "none";
+        };
+
+        window.onclick = function (event) {
+          if (event.target == modal) {
+            modal.style.display = "none";
+          }
+        };
+      }
+
+      window.onload = function () {
+        fetchData();
+      };
+    </script>
+  </body>
+</html>
