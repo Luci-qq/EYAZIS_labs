@@ -86,10 +86,14 @@ def search(text_name, tag: str, db: Session = _fastapi.Depends(get_db)):
     return manager.search(tag=tag, xml=xml)
 
 @app.get("/gpt/get_synonyms_antonyms/{word}")
-def semantic_analys(word: str):
-    synonyms = get_synonyms(word=word)
-    antonyms = get_antonyms(word=word)
-    return (synonyms, antonyms)
+def semantic_analysis(word: str):
+    index = word.index('Слово')
+    res = word[:index]
+    definition = (manager.get_definition(word=res))
+    print(definition)
+    synonyms = get_synonyms(word=res)
+    antonyms = get_antonyms(word=res)
+    return definition, synonyms, antonyms
 
 @app.get("/gpt/chatting/{message}")
 def gpt_chat(message: str):
@@ -99,5 +103,5 @@ def gpt_chat(message: str):
 @app.get("/gpt/chatting", response_class=HTMLResponse)
 def index(request: _fastapi.Request):
     return templates.TemplateResponse(
-        request=request, name="gpt_chat.html"
+        request=request, name="test.html"
     )

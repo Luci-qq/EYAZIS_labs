@@ -222,13 +222,11 @@
 
         if (target.classList.contains("tooltip")) {
           const word = target.textContent.replace(/[,.'""«»\-!?:;—]+/g, "");
-          const tooltipData = target.querySelector(".tooltiptext").innerHTML;
-
-          fetchSynonymsAntonymsWithLoading(word, tooltipData);
+          fetchSynonymsAntonymsWithLoading(word);
         }
       }
 
-      function fetchSynonymsAntonymsWithLoading(word, tooltipData) {
+      function fetchSynonymsAntonymsWithLoading(word) {
         const loadingElement = document.createElement("div");
         loadingElement.textContent = "Loading...";
         loadingElement.style.position = "fixed";
@@ -253,7 +251,7 @@
             const antonyms = response[2].join(", ");
 
             const modalContent = `
-        ${tooltipData}
+        <strong>Слово:</strong> ${word}<br>
         ${definition ? `<br><strong>Определение:</strong> ${definition}` : ""}
         ${synonyms ? `<br><strong>Синонимы:</strong> ${synonyms}` : ""}
         ${antonyms ? `<br><strong>Антонимы:</strong> ${antonyms}` : ""}
