@@ -6,7 +6,7 @@ from app.analyzer import Analyzer as TextHandler, CorpusManager
 from app.crud import create_text, get_text, get_text_by_id, set_buffer
 from app.database import SessionLocal, engine, Base
 from app.schemas import Text, CurrentTable
-from app.llm_api import get_synonyms, get_antonyms, chatting
+from app.llm_api import get_synonyms, get_antonyms, chatting, get_definition
 
 Base.metadata.create_all(bind=engine)
 app = _fastapi.FastAPI(debug=True)
@@ -90,6 +90,8 @@ def semantic_analysis(word: str):
     index = word.index('Слово')
     res = word[:index]
     definition = (manager.get_definition(word=res))
+    if definition == None:
+        definition = get_definition(word=res)
     print(definition)
     synonyms = get_synonyms(word=res)
     antonyms = get_antonyms(word=res)
